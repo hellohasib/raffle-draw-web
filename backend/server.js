@@ -8,6 +8,7 @@ require('dotenv').config();
 const authRoutes = require('./routes/auth');
 const raffleDrawRoutes = require('./routes/raffleDraws');
 const adminRoutes = require('./routes/admin');
+const uploadRoutes = require('./routes/uploads');
 
 const app = express();
 const PORT = process.env.PORT || 8000;
@@ -27,6 +28,7 @@ app.use((req, res, next) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/raffle-draws', raffleDrawRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/uploads', uploadRoutes);
 
 // Swagger documentation
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, {
@@ -69,8 +71,8 @@ const startServer = async () => {
     await sequelize.authenticate();
     console.log('Database connection established successfully.');
 
-    // Sync database models
-    await sequelize.sync({ alter: true });
+    // Sync database models - use safe sync to avoid schema conflicts
+    await sequelize.sync({ force: false, alter: false });
     console.log('Database models synchronized.');
 
     // Start server

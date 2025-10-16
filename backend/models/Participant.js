@@ -22,6 +22,10 @@ const Participant = sequelize.define('Participant', {
     type: DataTypes.STRING(20),
     allowNull: true
   },
+  designation: {
+    type: DataTypes.STRING(100),
+    allowNull: true
+  },
   ticketNumber: {
     type: DataTypes.STRING(50),
     allowNull: true,

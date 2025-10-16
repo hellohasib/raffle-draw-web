@@ -1,7 +1,7 @@
 const express = require('express');
 const { RaffleDraw, Prize, Participant, User } = require('../models');
 const { authenticateToken, requireOwnershipOrAdmin } = require('../middleware/auth');
-const { validateRaffleDraw, validatePrize, validateParticipant } = require('../middleware/validation');
+const { validateRaffleDraw, validatePrize, validateParticipant, validateParticipantUpdate } = require('../middleware/validation');
 
 const router = express.Router();
 
@@ -463,7 +463,7 @@ router.post('/:id/participants', authenticateToken, validateParticipant, async (
       }
     }
 
-    const { name, email, phone } = req.body;
+    const { name, email, phone, designation } = req.body;
 
     // Generate unique ticket number
     const ticketNumber = `TKT-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -472,6 +472,7 @@ router.post('/:id/participants', authenticateToken, validateParticipant, async (
       name,
       email,
       phone,
+      designation,
       ticketNumber,
       raffleDrawId: raffleDraw.id
     });
@@ -486,6 +487,136 @@ router.post('/:id/participants', authenticateToken, validateParticipant, async (
     res.status(500).json({
       success: false,
       message: 'Failed to add participant',
+      error: error.message
+    });
+  }
+});
+
+// Update participant details
+router.put('/:id/participants/:participantId', authenticateToken, validateParticipantUpdate, async (req, res) => {
+  try {
+    const raffleDraw = await RaffleDraw.findOne({
+      where: {
+        id: req.params.id,
+        userId: req.user.id
+      }
+    });
+
+    if (!raffleDraw) {
+      return res.status(404).json({
+        success: false,
+        message: 'Raffle draw not found'
+      });
+    }
+
+    if (raffleDraw.status === 'completed') {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot update participants in a completed raffle draw'
+      });
+    }
+
+    const participant = await Participant.findOne({
+      where: {
+        id: req.params.participantId,
+        raffleDrawId: raffleDraw.id
+      }
+    });
+
+    if (!participant) {
+      return res.status(404).json({
+        success: false,
+        message: 'Participant not found'
+      });
+    }
+
+    if (participant.isWinner) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot update a participant who has already won a prize'
+      });
+    }
+
+    const updateData = {};
+    ['name', 'email', 'phone', 'designation'].forEach((field) => {
+      if (Object.prototype.hasOwnProperty.call(req.body, field)) {
+        updateData[field] = req.body[field] === '' ? null : req.body[field];
+      }
+    });
+
+    await participant.update(updateData);
+
+    res.json({
+      success: true,
+      message: 'Participant updated successfully',
+      data: { participant }
+    });
+  } catch (error) {
+    console.error('Update participant error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update participant',
+      error: error.message
+    });
+  }
+});
+
+// Delete participant
+router.delete('/:id/participants/:participantId', authenticateToken, async (req, res) => {
+  try {
+    const raffleDraw = await RaffleDraw.findOne({
+      where: {
+        id: req.params.id,
+        userId: req.user.id
+      }
+    });
+
+    if (!raffleDraw) {
+      return res.status(404).json({
+        success: false,
+        message: 'Raffle draw not found'
+      });
+    }
+
+    if (raffleDraw.status === 'completed') {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot delete participants from a completed raffle draw'
+      });
+    }
+
+    const participant = await Participant.findOne({
+      where: {
+        id: req.params.participantId,
+        raffleDrawId: raffleDraw.id
+      }
+    });
+
+    if (!participant) {
+      return res.status(404).json({
+        success: false,
+        message: 'Participant not found'
+      });
+    }
+
+    if (participant.isWinner) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot delete a participant who has already won a prize'
+      });
+    }
+
+    await participant.destroy();
+
+    res.json({
+      success: true,
+      message: 'Participant deleted successfully'
+    });
+  } catch (error) {
+    console.error('Delete participant error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete participant',
       error: error.message
     });
   }

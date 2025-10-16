@@ -89,6 +89,44 @@ const validateParticipant = [
     .optional()
     .isLength({ max: 20 })
     .withMessage('Phone number must be less than 20 characters'),
+  body('designation')
+    .optional()
+    .isLength({ max: 100 })
+    .withMessage('Designation must be less than 100 characters'),
+  handleValidationErrors
+];
+
+const validateParticipantUpdate = [
+  body('name')
+    .optional()
+    .isLength({ min: 1, max: 100 })
+    .withMessage('Name must be less than 100 characters'),
+  body('email')
+    .optional({ nullable: true })
+    .custom((value) => {
+      if (value === null || value === undefined || value === '') {
+        return true;
+      }
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+    })
+    .withMessage('Please provide a valid email address'),
+  body('phone')
+    .optional({ nullable: true })
+    .isLength({ max: 20 })
+    .withMessage('Phone number must be less than 20 characters'),
+  body('designation')
+    .optional({ nullable: true })
+    .isLength({ max: 100 })
+    .withMessage('Designation must be less than 100 characters'),
+  body()
+    .custom((value) => {
+      const allowedFields = ['name', 'email', 'phone', 'designation'];
+      const hasFieldToUpdate = allowedFields.some((field) => value[field] !== undefined);
+      if (!hasFieldToUpdate) {
+        throw new Error('At least one field (name, email, phone, designation) must be provided to update');
+      }
+      return true;
+    }),
   handleValidationErrors
 ];
 
@@ -98,5 +136,6 @@ module.exports = {
   validateUserLogin,
   validateRaffleDraw,
   validatePrize,
-  validateParticipant
+  validateParticipant,
+  validateParticipantUpdate
 };

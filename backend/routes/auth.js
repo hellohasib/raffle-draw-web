@@ -2,6 +2,7 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const { User } = require('../models');
 const { validateUserRegistration, validateUserLogin } = require('../middleware/validation');
+const { Op } = require('sequelize');
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_key_here';
@@ -91,7 +92,7 @@ router.post('/register', validateUserRegistration, async (req, res) => {
     // Check if user already exists
     const existingUser = await User.findOne({
       where: {
-        $or: [{ username }, { email }]
+        [Op.or]: [{ username }, { email }]
       }
     });
 
@@ -207,7 +208,7 @@ router.post('/login', validateUserLogin, async (req, res) => {
     // Find user by username or email
     const user = await User.findOne({
       where: {
-        $or: [{ username }, { email: username }]
+        [Op.or]: [{ username }, { email: username }]
       }
     });
 

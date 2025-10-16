@@ -462,6 +462,130 @@ router.get('/dashboard', authenticateToken, requireAdmin, async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /api/admin/raffle-draws/{id}/status:
+ *   put:
+ *     summary: Update raffle draw status (admin only)
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Raffle draw ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - status
+ *             properties:
+ *               status:
+ *                 type: string
+ *                 enum: [draft, active, completed, cancelled]
+ *                 description: New status for the raffle draw
+ *     responses:
+ *       200:
+ *         description: Raffle draw status updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/Success'
+ *                 - type: object
+ *                   properties:
+ *                     data:
+ *                       type: object
+ *                       properties:
+ *                         raffleDraw:
+ *                           $ref: '#/components/schemas/RaffleDraw'
+ *       400:
+ *         description: Bad request - Invalid status or validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       403:
+ *         description: Forbidden - Admin access required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: Raffle draw not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.put('/raffle-draws/:id/status', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { status } = req.body;
+    const validStatuses = ['draft', 'active', 'completed', 'cancelled'];
+
+    // Validate status
+    if (!status || !validStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid status. Must be one of: draft, active, completed, cancelled'
+      });
+    }
+
+    const raffleDraw = await RaffleDraw.findByPk(req.params.id, {
+      include: [
+        {
+          model: User,
+          as: 'user',
+          attributes: ['id', 'username', 'firstName', 'lastName', 'email']
+        }
+      ]
+    });
+
+    if (!raffleDraw) {
+      return res.status(404).json({
+        success: false,
+        message: 'Raffle draw not found'
+      });
+    }
+
+    const oldStatus = raffleDraw.status;
+    
+    // Update the status
+    await raffleDraw.update({ status });
+
+    res.json({
+      success: true,
+      message: `Raffle draw status updated from ${oldStatus} to ${status}`,
+      data: { raffleDraw }
+    });
+  } catch (error) {
+    console.error('Admin update raffle draw status error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update raffle draw status',
+      error: error.message
+    });
+  }
+});
+
 // Delete raffle draw (admin only)
 router.delete('/raffle-draws/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
