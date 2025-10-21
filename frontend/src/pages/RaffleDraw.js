@@ -479,11 +479,11 @@ const RaffleDraw = () => {
           {drawStatus?.drawnCount > 0 && raffleDraw.status !== 'closed' && (
             <button
               onClick={() => handleDownloadWinners('csv')}
-              className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+              className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
               title="Download winners as CSV"
             >
               <Download className="h-4 w-4 mr-2" />
-              Download Winners
+              Download Winners List
             </button>
           )}
           {(raffleDraw.status === 'active' || raffleDraw.status === 'completed') && raffleDraw.status !== 'closed' && (
@@ -592,6 +592,11 @@ const RaffleDraw = () => {
           >
             <Play className="inline h-4 w-4 mr-1" />
             Draw
+            {raffleDraw.status === 'draft' && (
+              <span className="ml-1 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                Draft
+              </span>
+            )}
           </button>
           <button
             onClick={() => setActiveTab('prizes')}
@@ -621,6 +626,26 @@ const RaffleDraw = () => {
       {/* Overview Tab */}
       {activeTab === 'overview' && (
         <div className="space-y-6">
+          {/* Draft Mode Message */}
+          {raffleDraw.status === 'draft' && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+              <div className="flex items-start">
+                <div className="flex-shrink-0">
+                  <AlertCircle className="h-6 w-6 text-yellow-600" />
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-lg font-medium text-yellow-800">Raffle Draw in Draft Mode</h3>
+                  <div className="mt-2 text-sm text-yellow-700">
+                    <p>This raffle draw is currently in draft mode and cannot be conducted yet.</p>
+                    <p className="mt-1">
+                      <strong>Please contact the system administrator to activate this raffle draw.</strong>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Description */}
           {raffleDraw.description && (
             <div className="bg-white shadow rounded-lg p-6">
@@ -685,7 +710,24 @@ const RaffleDraw = () => {
       {/* Draw Tab */}
       {activeTab === 'draw' && (
         <div className="space-y-4">
-          {raffleDraw.prizes?.length === 0 ? (
+          {raffleDraw.status === 'draft' ? (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+              <div className="flex items-start">
+                <div className="flex-shrink-0">
+                  <AlertCircle className="h-6 w-6 text-yellow-600" />
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-lg font-medium text-yellow-800">Cannot Conduct Draw</h3>
+                  <div className="mt-2 text-sm text-yellow-700">
+                    <p>This raffle draw is in draft mode and cannot be conducted yet.</p>
+                    <p className="mt-1">
+                      <strong>Please contact the system administrator to activate this raffle draw.</strong>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : raffleDraw.prizes?.length === 0 ? (
             <div className="text-center py-12">
               <Gift className="mx-auto h-12 w-12 text-gray-400" />
               <h3 className="mt-2 text-sm font-medium text-gray-900">No prizes</h3>

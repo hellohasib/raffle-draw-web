@@ -450,7 +450,7 @@ router.post('/:id/participants', authenticateToken, validateParticipant, async (
     }
 
     // Check max participants limit
-    if (raffleDraw.maxParticipants) {
+    if (raffleDraw.maxParticipants && raffleDraw.maxParticipants > 0) {
       const participantCount = await Participant.count({
         where: { raffleDrawId: raffleDraw.id }
       });

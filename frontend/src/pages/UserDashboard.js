@@ -76,10 +76,17 @@ const UserDashboard = () => {
 
   const handleCreateRaffle = async (e) => {
     e.preventDefault();
+    
+    // Validate maxParticipants - only check if it's negative
+    if (newRaffle.maxParticipants && parseInt(newRaffle.maxParticipants) < 0) {
+      toast.error('Max participants cannot be negative');
+      return;
+    }
+    
     try {
       const raffleData = {
         ...newRaffle,
-        maxParticipants: newRaffle.maxParticipants ? parseInt(newRaffle.maxParticipants) : null,
+        maxParticipants: newRaffle.maxParticipants ? parseInt(newRaffle.maxParticipants) : 0,
         drawDate: new Date(newRaffle.drawDate).toISOString(),
         status: 'active' // Set to active immediately for conducting draws
       };
@@ -370,7 +377,7 @@ const UserDashboard = () => {
                   <input
                     type="text"
                     required
-                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                    className="mt-1 block w-full border-2 border-gray-300 rounded-lg shadow-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 sm:text-sm px-4 py-3 transition-all duration-200 hover:shadow-xl focus:shadow-xl"
                     value={newRaffle.title}
                     onChange={(e) => setNewRaffle({ ...newRaffle, title: e.target.value })}
                   />
@@ -380,7 +387,7 @@ const UserDashboard = () => {
                   <label className="block text-sm font-medium text-gray-700">Description</label>
                   <textarea
                     rows={3}
-                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                    className="mt-1 block w-full border-2 border-gray-300 rounded-lg shadow-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 sm:text-sm px-4 py-3 transition-all duration-200 hover:shadow-xl focus:shadow-xl"
                     value={newRaffle.description}
                     onChange={(e) => setNewRaffle({ ...newRaffle, description: e.target.value })}
                   />
@@ -391,7 +398,7 @@ const UserDashboard = () => {
                   <input
                     type="datetime-local"
                     required
-                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                    className="mt-1 block w-full border-2 border-gray-300 rounded-lg shadow-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 sm:text-sm px-4 py-3 transition-all duration-200 hover:shadow-xl focus:shadow-xl"
                     value={newRaffle.drawDate}
                     onChange={(e) => setNewRaffle({ ...newRaffle, drawDate: e.target.value })}
                   />
@@ -401,8 +408,8 @@ const UserDashboard = () => {
                   <label className="block text-sm font-medium text-gray-700">Max Participants (optional)</label>
                   <input
                     type="number"
-                    min="1"
-                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                    min="0"
+                    className="mt-1 block w-full border-2 border-gray-300 rounded-lg shadow-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 sm:text-sm px-4 py-3 transition-all duration-200 hover:shadow-xl focus:shadow-xl"
                     value={newRaffle.maxParticipants}
                     onChange={(e) => setNewRaffle({ ...newRaffle, maxParticipants: e.target.value })}
                   />

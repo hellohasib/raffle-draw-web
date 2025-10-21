@@ -60,8 +60,8 @@ const validateRaffleDraw = [
     .withMessage('Please provide a valid draw date'),
   body('maxParticipants')
     .optional()
-    .isInt({ min: 1 })
-    .withMessage('Max participants must be a positive integer'),
+    .isInt({ min: 0 })
+    .withMessage('Max participants must be a non-negative integer'),
   handleValidationErrors
 ];
 

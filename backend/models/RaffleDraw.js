@@ -28,7 +28,7 @@ const RaffleDraw = sequelize.define('RaffleDraw', {
     type: DataTypes.INTEGER,
     allowNull: true,
     validate: {
-      min: 1
+      min: 0
     }
   },
   userId: {

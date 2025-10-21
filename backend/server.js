@@ -15,9 +15,13 @@ const PORT = process.env.PORT || 5001;
 
 // Middleware
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://121.200.60.82:3000'],
+  origin: ['http://localhost:3000'],
   credentials: true
 }));
+// app.use(cors({
+//   origin: ['http://localhost:3000', 'http://121.200.60.82:3000'],
+//   credentials: true
+// }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -79,7 +83,7 @@ const startServer = async () => {
     console.log('Database models synchronized.');
 
     // Start server
-    app.listen(PORT, '0.0.0.0', () => {
+    app.listen(PORT, '0.0.0.0' || localhost, () => {
       console.log(`Server is running on port ${PORT}`);
       console.log(`Health check: http://0.0.0.0:${PORT}/api/health`);
       console.log(`API Documentation: http://0.0.0.0:${PORT}/api-docs`);
