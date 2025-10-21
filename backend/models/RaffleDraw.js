@@ -20,7 +20,7 @@ const RaffleDraw = sequelize.define('RaffleDraw', {
     allowNull: false
   },
   status: {
-    type: DataTypes.ENUM('draft', 'active', 'completed', 'cancelled'),
+    type: DataTypes.ENUM('draft', 'active', 'completed', 'cancelled', 'closed'),
     defaultValue: 'draft',
     allowNull: false
   },

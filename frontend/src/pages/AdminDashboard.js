@@ -13,7 +13,9 @@ import {
   UserX,
   Clock,
   CheckCircle,
-  XCircle
+  XCircle,
+  Settings,
+  Edit
 } from 'lucide-react';
 
 const AdminDashboard = () => {
@@ -28,10 +30,26 @@ const AdminDashboard = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
+  const [editingStatus, setEditingStatus] = useState(null);
+  const [statusChangeLoading, setStatusChangeLoading] = useState(false);
 
   useEffect(() => {
     fetchDashboardData();
   }, []);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (editingStatus && !event.target.closest('.status-dropdown')) {
+        setEditingStatus(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [editingStatus]);
 
   const fetchDashboardData = async () => {
     try {
@@ -64,6 +82,14 @@ const AdminDashboard = () => {
     }
   };
 
+  const getUserDisplayName = (user) => {
+    if (!user) return 'Unknown';
+    if (user.firstName && user.lastName) {
+      return `${user.firstName} ${user.lastName}`;
+    }
+    return user.username || 'Unknown';
+  };
+
   const getStatusColor = (status) => {
     switch (status) {
       case 'draft':
@@ -92,6 +118,56 @@ const AdminDashboard = () => {
       default:
         return <Clock className="h-4 w-4" />;
     }
+  };
+
+  const handleStatusChange = async (raffleId, newStatus) => {
+    setStatusChangeLoading(true);
+    try {
+      await adminAPI.updateRaffleDrawStatus(raffleId, newStatus);
+      
+      // Update local state
+      setRaffleDraws(prevRaffles => 
+        prevRaffles.map(raffle => 
+          raffle.id === raffleId 
+            ? { ...raffle, status: newStatus }
+            : raffle
+        )
+      );
+      
+      // Update stats
+      setStats(prevStats => {
+        const updatedRaffles = raffleDraws.map(raffle => 
+          raffle.id === raffleId 
+            ? { ...raffle, status: newStatus }
+            : raffle
+        );
+        
+        return {
+          ...prevStats,
+          activeRaffles: updatedRaffles.filter(r => r.status === 'active').length,
+          completedRaffles: updatedRaffles.filter(r => r.status === 'completed').length,
+        };
+      });
+      
+      setEditingStatus(null);
+      toast.success(`Raffle draw status updated to ${newStatus}`);
+    } catch (error) {
+      toast.error('Failed to update raffle draw status');
+      console.error('Error updating status:', error);
+    } finally {
+      setStatusChangeLoading(false);
+    }
+  };
+
+  const getStatusOptions = (currentStatus) => {
+    const allStatuses = [
+      { value: 'draft', label: 'Draft', icon: <Clock className="h-4 w-4" /> },
+      { value: 'active', label: 'Active', icon: <Activity className="h-4 w-4" /> },
+      { value: 'completed', label: 'Completed', icon: <CheckCircle className="h-4 w-4" /> },
+      { value: 'cancelled', label: 'Cancelled', icon: <XCircle className="h-4 w-4" /> }
+    ];
+    
+    return allStatuses.filter(status => status.value !== currentStatus);
   };
 
   if (loading) {
@@ -249,7 +325,7 @@ const AdminDashboard = () => {
                             {raffle.title}
                           </p>
                           <p className="text-sm text-gray-500">
-                            Created by {raffle.user?.name || 'Unknown'}
+                            Created by {getUserDisplayName(raffle.user)}
                           </p>
                         </div>
                         <div className="flex items-center space-x-2">
@@ -260,6 +336,43 @@ const AdminDashboard = () => {
                           <span className="text-sm text-gray-500">
                             {raffle.participants?.length || 0} participants
                           </span>
+                          
+                          {/* Quick Status Change in Overview */}
+                          <div className="relative status-dropdown">
+                            <button
+                              onClick={() => setEditingStatus(editingStatus === raffle.id ? null : raffle.id)}
+                              className="text-gray-400 hover:text-gray-600 p-1 rounded"
+                              disabled={statusChangeLoading}
+                              title="Change Status"
+                            >
+                              {statusChangeLoading ? (
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
+                              ) : (
+                                <Edit className="h-4 w-4" />
+                              )}
+                            </button>
+                            
+                            {editingStatus === raffle.id && (
+                              <div className="absolute right-0 mt-2 w-40 bg-white rounded-md shadow-lg z-10 border">
+                                <div className="py-1">
+                                  <div className="px-3 py-1 text-xs text-gray-700 border-b">
+                                    Change Status
+                                  </div>
+                                  {getStatusOptions(raffle.status).map((status) => (
+                                    <button
+                                      key={status.value}
+                                      onClick={() => handleStatusChange(raffle.id, status.value)}
+                                      className="w-full text-left px-3 py-1 text-xs text-gray-700 hover:bg-gray-100 flex items-center"
+                                      disabled={statusChangeLoading}
+                                    >
+                                      <span className="mr-2">{status.icon}</span>
+                                      {status.label}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </li>
@@ -311,8 +424,45 @@ const AdminDashboard = () => {
                     </div>
                     <div className="flex items-center space-x-2">
                       <span className="text-sm text-gray-500">
-                        by {raffle.user?.name || 'Unknown'}
+                        by {getUserDisplayName(raffle.user)}
                       </span>
+                      
+                      {/* Status Change Dropdown */}
+                      <div className="relative status-dropdown">
+                        <button
+                          onClick={() => setEditingStatus(editingStatus === raffle.id ? null : raffle.id)}
+                          className="text-gray-600 hover:text-gray-900 p-1 rounded"
+                          disabled={statusChangeLoading}
+                        >
+                          {statusChangeLoading ? (
+                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-600"></div>
+                          ) : (
+                            <Settings className="h-5 w-5" />
+                          )}
+                        </button>
+                        
+                        {editingStatus === raffle.id && (
+                          <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 border">
+                            <div className="py-1">
+                              <div className="px-4 py-2 text-sm text-gray-700 border-b">
+                                Change Status
+                              </div>
+                              {getStatusOptions(raffle.status).map((status) => (
+                                <button
+                                  key={status.value}
+                                  onClick={() => handleStatusChange(raffle.id, status.value)}
+                                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                                  disabled={statusChangeLoading}
+                                >
+                                  <span className="mr-2">{status.icon}</span>
+                                  Change to {status.label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      
                       <button className="text-primary-600 hover:text-primary-900">
                         <Eye className="h-5 w-5" />
                       </button>
@@ -346,8 +496,13 @@ const AdminDashboard = () => {
                         </div>
                       </div>
                       <div className="ml-4">
-                        <p className="text-sm font-medium text-gray-900">{user.name}</p>
+                        <p className="text-sm font-medium text-gray-900">
+                          {getUserDisplayName(user)}
+                        </p>
                         <p className="text-sm text-gray-500">{user.email}</p>
+                        {user.organization && (
+                          <p className="text-sm text-gray-400">{user.organization}</p>
+                        )}
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">

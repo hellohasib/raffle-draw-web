@@ -8,7 +8,10 @@
     "dev": "nodemon server.js",
     "init-db": "node scripts/initDb.js",
     "add-designation": "node scripts/addDesignationColumn.js",
+    "add-organization": "node scripts/addOrganizationColumn.js",
     "clean-indexes": "node scripts/cleanUsersIndexes.js",
+    "clean-participants-indexes": "node scripts/cleanParticipantsIndexes.js",
+    "clean-all-indexes": "node scripts/cleanAllIndexes.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [

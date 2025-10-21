@@ -32,6 +32,10 @@ const validateUserRegistration = [
   body('lastName')
     .isLength({ min: 1, max: 50 })
     .withMessage('Last name is required and must be less than 50 characters'),
+  body('organization')
+    .optional()
+    .isLength({ max: 100 })
+    .withMessage('Organization must be less than 100 characters'),
   handleValidationErrors
 ];
 

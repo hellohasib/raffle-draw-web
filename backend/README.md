@@ -32,14 +32,23 @@ A comprehensive backend API for managing raffle draw events built with Node.js, 
 
 3. Create a `.env` file in the backend directory:
    ```env
-   NODE_ENV=development
-   PORT=5000
-   JWT_SECRET=your_jwt_secret_key_here
-   DB_HOST=localhost
+   # Database Configuration
    DB_NAME=raffle_draw
-   DB_USER=sigmind
-   DB_PASS=$!gmind9876!
+   DB_USER=your_db_username
+   DB_PASSWORD=your_db_password
+   DB_HOST=localhost
+   DB_DIALECT=mysql
+   DB_LOGGING=false
+
+   # Server Configuration
+   PORT=5001
+   NODE_ENV=development
+
+   # JWT Configuration
+   JWT_SECRET=your_jwt_secret_key_here
    ```
+
+   **Note:** Copy the `.env.example` file and update the values with your actual database credentials and JWT secret.
 
 4. Make sure your MySQL database is running and create the database:
    ```sql
@@ -51,11 +60,11 @@ A comprehensive backend API for managing raffle draw events built with Node.js, 
    npm run dev
    ```
 
-The server will start on `http://localhost:5000`
+The server will start on `http://localhost:5001`
 
 6. Access the API documentation:
-   - **Swagger UI:** `http://localhost:5000/api-docs`
-   - **Health Check:** `http://localhost:5000/api/health`
+   - **Swagger UI:** `http://localhost:5001/api-docs`
+   - **Health Check:** `http://localhost:5001/api/health`
 
 ## API Endpoints
 
@@ -135,7 +144,7 @@ The server will start on `http://localhost:5000`
 
 The API includes comprehensive Swagger/OpenAPI documentation that can be accessed at:
 
-**Swagger UI:** `http://localhost:5000/api-docs`
+**Swagger UI:** `http://localhost:5001/api-docs`
 
 The documentation includes:
 - Interactive API explorer

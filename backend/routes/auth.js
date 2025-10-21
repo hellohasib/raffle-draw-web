@@ -50,6 +50,9 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_key_here';
  *               lastName:
  *                 type: string
  *                 example: Doe
+ *               organization:
+ *                 type: string
+ *                 example: Acme Corporation
  *               role:
  *                 type: string
  *                 enum: [admin, user]
@@ -87,7 +90,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_key_here';
  */
 router.post('/register', validateUserRegistration, async (req, res) => {
   try {
-    const { username, email, password, firstName, lastName, role } = req.body;
+    const { username, email, password, firstName, lastName, organization, role } = req.body;
 
     // Check if user already exists
     const existingUser = await User.findOne({
@@ -112,6 +115,7 @@ router.post('/register', validateUserRegistration, async (req, res) => {
       password,
       firstName,
       lastName,
+      organization,
       role: role || 'user'
     });
 
@@ -132,6 +136,7 @@ router.post('/register', validateUserRegistration, async (req, res) => {
           email: user.email,
           firstName: user.firstName,
           lastName: user.lastName,
+          organization: user.organization,
           role: user.role
         },
         token
@@ -252,6 +257,7 @@ router.post('/login', validateUserLogin, async (req, res) => {
           email: user.email,
           firstName: user.firstName,
           lastName: user.lastName,
+          organization: user.organization,
           role: user.role
         },
         token

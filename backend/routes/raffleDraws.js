@@ -303,10 +303,10 @@ router.put('/:id', authenticateToken, validateRaffleDraw, async (req, res) => {
       });
     }
 
-    if (raffleDraw.status === 'completed') {
+    if (raffleDraw.status === 'completed' || raffleDraw.status === 'closed') {
       return res.status(400).json({
         success: false,
-        message: 'Cannot update completed raffle draw'
+        message: `Cannot update ${raffleDraw.status} raffle draw`
       });
     }
 
@@ -353,10 +353,10 @@ router.delete('/:id', authenticateToken, async (req, res) => {
       });
     }
 
-    if (raffleDraw.status === 'completed') {
+    if (raffleDraw.status === 'completed' || raffleDraw.status === 'closed') {
       return res.status(400).json({
         success: false,
-        message: 'Cannot delete completed raffle draw'
+        message: `Cannot delete ${raffleDraw.status} raffle draw`
       });
     }
 
@@ -393,10 +393,10 @@ router.post('/:id/prizes', authenticateToken, validatePrize, async (req, res) =>
       });
     }
 
-    if (raffleDraw.status === 'completed') {
+    if (raffleDraw.status === 'completed' || raffleDraw.status === 'closed') {
       return res.status(400).json({
         success: false,
-        message: 'Cannot add prizes to completed raffle draw'
+        message: `Cannot add prizes to ${raffleDraw.status} raffle draw`
       });
     }
 
@@ -442,10 +442,10 @@ router.post('/:id/participants', authenticateToken, validateParticipant, async (
       });
     }
 
-    if (raffleDraw.status === 'completed') {
+    if (raffleDraw.status === 'completed' || raffleDraw.status === 'closed') {
       return res.status(400).json({
         success: false,
-        message: 'Cannot add participants to completed raffle draw'
+        message: `Cannot add participants to ${raffleDraw.status} raffle draw`
       });
     }
 
@@ -509,10 +509,10 @@ router.put('/:id/participants/:participantId', authenticateToken, validatePartic
       });
     }
 
-    if (raffleDraw.status === 'completed') {
+    if (raffleDraw.status === 'completed' || raffleDraw.status === 'closed') {
       return res.status(400).json({
         success: false,
-        message: 'Cannot update participants in a completed raffle draw'
+        message: `Cannot update participants in a ${raffleDraw.status} raffle draw`
       });
     }
 
@@ -578,10 +578,10 @@ router.delete('/:id/participants/:participantId', authenticateToken, async (req,
       });
     }
 
-    if (raffleDraw.status === 'completed') {
+    if (raffleDraw.status === 'completed' || raffleDraw.status === 'closed') {
       return res.status(400).json({
         success: false,
-        message: 'Cannot delete participants from a completed raffle draw'
+        message: `Cannot delete participants from a ${raffleDraw.status} raffle draw`
       });
     }
 
@@ -1144,10 +1144,10 @@ router.post('/:id/reset-draw', authenticateToken, async (req, res) => {
       });
     }
 
-    if (raffleDraw.status === 'completed') {
+    if (raffleDraw.status === 'completed' || raffleDraw.status === 'closed') {
       return res.status(400).json({
         success: false,
-        message: 'Cannot reset a completed raffle draw'
+        message: `Cannot reset a ${raffleDraw.status} raffle draw`
       });
     }
 
@@ -1177,6 +1177,483 @@ router.post('/:id/reset-draw', authenticateToken, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to reset raffle draw',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /api/raffle-draws/{id}/prizes/{prizeId}/redraw:
+ *   post:
+ *     summary: Redraw winner for a specific prize (clear and redraw)
+ *     tags: [Raffle Draws]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Raffle draw ID
+ *       - in: path
+ *         name: prizeId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Prize ID to redraw
+ *     responses:
+ *       200:
+ *         description: Prize winner cleared successfully, ready for redraw
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Success'
+ *       400:
+ *         description: Bad request - Prize doesn't have a winner or raffle is completed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: Raffle draw or prize not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.post('/:id/prizes/:prizeId/redraw', authenticateToken, async (req, res) => {
+  try {
+    const raffleDraw = await RaffleDraw.findOne({
+      where: { 
+        id: req.params.id,
+        userId: req.user.id 
+      }
+    });
+
+    if (!raffleDraw) {
+      return res.status(404).json({
+        success: false,
+        message: 'Raffle draw not found'
+      });
+    }
+
+    if (raffleDraw.status === 'completed' || raffleDraw.status === 'closed') {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot redraw prizes in a ${raffleDraw.status} raffle draw. Please reset the entire draw first.`
+      });
+    }
+
+    // Find the prize
+    const prize = await Prize.findOne({
+      where: {
+        id: req.params.prizeId,
+        raffleDrawId: raffleDraw.id
+      },
+      include: [
+        {
+          model: Participant,
+          as: 'winner',
+          required: false
+        }
+      ]
+    });
+
+    if (!prize) {
+      return res.status(404).json({
+        success: false,
+        message: 'Prize not found'
+      });
+    }
+
+    if (!prize.winnerId) {
+      return res.status(400).json({
+        success: false,
+        message: 'This prize does not have a winner yet. Nothing to redraw.'
+      });
+    }
+
+    // Store the previous winner info for the response
+    const previousWinner = prize.winner;
+
+    // Get the participant who won this prize
+    const participant = await Participant.findByPk(prize.winnerId);
+
+    // Clear the winner from the prize
+    await prize.update({ winnerId: null });
+
+    // Reset the participant's winner status
+    if (participant) {
+      await participant.update({ isWinner: false, prizeId: null });
+    }
+
+    res.json({
+      success: true,
+      message: `Winner cleared for ${prize.name}. Ready to redraw.`,
+      data: {
+        prize,
+        previousWinner: previousWinner ? {
+          id: previousWinner.id,
+          name: previousWinner.name,
+          ticketNumber: previousWinner.ticketNumber
+        } : null
+      }
+    });
+  } catch (error) {
+    console.error('Redraw prize error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to redraw prize',
+      error: error.message
+    });
+  }
+});
+
+// Update prize details
+router.put('/:id/prizes/:prizeId', authenticateToken, validatePrize, async (req, res) => {
+  try {
+    const raffleDraw = await RaffleDraw.findOne({
+      where: {
+        id: req.params.id,
+        userId: req.user.id
+      }
+    });
+
+    if (!raffleDraw) {
+      return res.status(404).json({
+        success: false,
+        message: 'Raffle draw not found'
+      });
+    }
+
+    if (raffleDraw.status === 'completed' || raffleDraw.status === 'closed') {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot update prizes in a ${raffleDraw.status} raffle draw`
+      });
+    }
+
+    const prize = await Prize.findOne({
+      where: {
+        id: req.params.prizeId,
+        raffleDrawId: raffleDraw.id
+      }
+    });
+
+    if (!prize) {
+      return res.status(404).json({
+        success: false,
+        message: 'Prize not found'
+      });
+    }
+
+    if (prize.winnerId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot update a prize that already has a winner'
+      });
+    }
+
+    const { name, description, value, position } = req.body;
+    await prize.update({ name, description, value, position });
+
+    res.json({
+      success: true,
+      message: 'Prize updated successfully',
+      data: { prize }
+    });
+  } catch (error) {
+    console.error('Update prize error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update prize',
+      error: error.message
+    });
+  }
+});
+
+// Delete prize
+router.delete('/:id/prizes/:prizeId', authenticateToken, async (req, res) => {
+  try {
+    const raffleDraw = await RaffleDraw.findOne({
+      where: {
+        id: req.params.id,
+        userId: req.user.id
+      }
+    });
+
+    if (!raffleDraw) {
+      return res.status(404).json({
+        success: false,
+        message: 'Raffle draw not found'
+      });
+    }
+
+    if (raffleDraw.status === 'completed' || raffleDraw.status === 'closed') {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot delete prizes from a ${raffleDraw.status} raffle draw`
+      });
+    }
+
+    const prize = await Prize.findOne({
+      where: {
+        id: req.params.prizeId,
+        raffleDrawId: raffleDraw.id
+      }
+    });
+
+    if (!prize) {
+      return res.status(404).json({
+        success: false,
+        message: 'Prize not found'
+      });
+    }
+
+    if (prize.winnerId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot delete a prize that already has a winner'
+      });
+    }
+
+    await prize.destroy();
+
+    res.json({
+      success: true,
+      message: 'Prize deleted successfully'
+    });
+  } catch (error) {
+    console.error('Delete prize error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete prize',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /api/raffle-draws/{id}/mark-closed:
+ *   post:
+ *     summary: Mark a raffle draw as closed (no further edits allowed)
+ *     tags: [Raffle Draws]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Raffle draw ID
+ *     responses:
+ *       200:
+ *         description: Raffle draw marked as closed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Success'
+ *       400:
+ *         description: Bad request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: Raffle draw not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.post('/:id/mark-closed', authenticateToken, async (req, res) => {
+  try {
+    const raffleDraw = await RaffleDraw.findOne({
+      where: { 
+        id: req.params.id,
+        userId: req.user.id 
+      }
+    });
+
+    if (!raffleDraw) {
+      return res.status(404).json({
+        success: false,
+        message: 'Raffle draw not found'
+      });
+    }
+
+    if (raffleDraw.status === 'closed') {
+      return res.status(400).json({
+        success: false,
+        message: 'Raffle draw is already closed'
+      });
+    }
+
+    // Update status to closed
+    await raffleDraw.update({ status: 'closed' });
+
+    res.json({
+      success: true,
+      message: 'Raffle draw has been marked as closed. No further edits are allowed.',
+      data: { raffleDraw }
+    });
+  } catch (error) {
+    console.error('Mark closed error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to mark raffle draw as closed',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * @swagger
+ * /api/raffle-draws/{id}/winners/download:
+ *   get:
+ *     summary: Download winners list as CSV
+ *     tags: [Raffle Draws]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Raffle draw ID
+ *       - in: query
+ *         name: format
+ *         schema:
+ *           type: string
+ *           enum: [csv, json]
+ *           default: csv
+ *         description: Download format
+ *     responses:
+ *       200:
+ *         description: Winners list file
+ *         content:
+ *           text/csv:
+ *             schema:
+ *               type: string
+ *           application/json:
+ *             schema:
+ *               type: object
+ *       400:
+ *         description: No winners found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: Raffle draw not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.get('/:id/winners/download', authenticateToken, async (req, res) => {
+  try {
+    const { format = 'csv' } = req.query;
+    
+    const raffleDraw = await RaffleDraw.findOne({
+      where: { 
+        id: req.params.id,
+        userId: req.user.id 
+      },
+      include: [
+        {
+          model: Prize,
+          as: 'prizes',
+          include: [
+            {
+              model: Participant,
+              as: 'winner',
+              required: false
+            }
+          ],
+          order: [['position', 'ASC']]
+        }
+      ]
+    });
+
+    if (!raffleDraw) {
+      return res.status(404).json({
+        success: false,
+        message: 'Raffle draw not found'
+      });
+    }
+
+    // Get prizes with winners
+    const prizesWithWinners = raffleDraw.prizes.filter(prize => prize.winner);
+
+    if (prizesWithWinners.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No winners found for this raffle draw'
+      });
+    }
+
+    if (format === 'json') {
+      // Return JSON format
+      const winnersData = {
+        raffleDraw: {
+          id: raffleDraw.id,
+          title: raffleDraw.title,
+          drawDate: raffleDraw.drawDate,
+          status: raffleDraw.status
+        },
+        winners: prizesWithWinners.map(prize => ({
+          position: prize.position,
+          prizeName: prize.name,
+          prizeDescription: prize.description,
+          prizeValue: prize.value,
+          winnerName: prize.winner.name,
+          winnerEmail: prize.winner.email,
+          winnerPhone: prize.winner.phone,
+          winnerDesignation: prize.winner.designation,
+          ticketNumber: prize.winner.ticketNumber
+        }))
+      };
+
+      res.json({
+        success: true,
+        data: winnersData
+      });
+    } else {
+      // Return CSV format
+      let csv = 'Position,Prize Name,Prize Description,Prize Value,Winner Name,Winner Email,Winner Phone,Winner Designation,Ticket Number\n';
+      
+      prizesWithWinners.forEach(prize => {
+        const row = [
+          prize.position || '',
+          `"${(prize.name || '').replace(/"/g, '""')}"`,
+          `"${(prize.description || '').replace(/"/g, '""')}"`,
+          prize.value || '',
+          `"${(prize.winner.name || '').replace(/"/g, '""')}"`,
+          prize.winner.email || '',
+          prize.winner.phone || '',
+          `"${(prize.winner.designation || '').replace(/"/g, '""')}"`,
+          prize.winner.ticketNumber || ''
+        ];
+        csv += row.join(',') + '\n';
+      });
+
+      // Set headers for CSV download
+      const filename = `${raffleDraw.title.replace(/[^a-z0-9]/gi, '_')}_winners_${Date.now()}.csv`;
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.send(csv);
+    }
+  } catch (error) {
+    console.error('Download winners error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to download winners list',
       error: error.message
     });
   }

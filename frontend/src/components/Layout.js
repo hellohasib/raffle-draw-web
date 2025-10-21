@@ -20,6 +20,9 @@ const Layout = () => {
 
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  ];
+
+  const adminNavigation = [
     { name: 'Admin Panel', href: '/admin', icon: Users },
   ];
 
@@ -31,6 +34,10 @@ const Layout = () => {
   const isActive = (path) => {
     return location.pathname === path;
   };
+
+  const combinedNavigation = user?.role === 'admin'
+    ? [...navigation, ...adminNavigation]
+    : navigation;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -48,7 +55,7 @@ const Layout = () => {
             </button>
           </div>
           <nav className="flex-1 px-4 py-4">
-            {navigation.map((item) => {
+            {combinedNavigation.map((item) => {
               const Icon = item.icon;
               return (
                 <button
@@ -100,7 +107,7 @@ const Layout = () => {
             <h1 className="text-xl font-bold text-gray-900">Raffle Draw</h1>
           </div>
           <nav className="flex-1 px-4 py-4">
-            {navigation.map((item) => {
+            {combinedNavigation.map((item) => {
               const Icon = item.icon;
               return (
                 <button

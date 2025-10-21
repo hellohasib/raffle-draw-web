@@ -13,6 +13,7 @@ import Register from './pages/Register';
 import AdminDashboard from './pages/AdminDashboard';
 import UserDashboard from './pages/UserDashboard';
 import RaffleDraw from './pages/RaffleDraw';
+import RaffleParticipants from './pages/RaffleParticipants';
 import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
@@ -35,6 +36,7 @@ function App() {
               <Route path="dashboard" element={<UserDashboard />} />
               <Route path="admin" element={<AdminDashboard />} />
               <Route path="raffle/:id" element={<RaffleDraw />} />
+              <Route path="raffle/:id/participants" element={<RaffleParticipants />} />
             </Route>
           </Routes>
           

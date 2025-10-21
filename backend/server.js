@@ -11,10 +11,13 @@ const adminRoutes = require('./routes/admin');
 const uploadRoutes = require('./routes/uploads');
 
 const app = express();
-const PORT = process.env.PORT || 8000;
+const PORT = process.env.PORT || 5001;
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: ['http://localhost:3000', 'http://121.200.60.82:3000'],
+  credentials: true
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -76,10 +79,10 @@ const startServer = async () => {
     console.log('Database models synchronized.');
 
     // Start server
-    app.listen(PORT, () => {
+    app.listen(PORT, '0.0.0.0', () => {
       console.log(`Server is running on port ${PORT}`);
-      console.log(`Health check: http://localhost:${PORT}/api/health`);
-      console.log(`API Documentation: http://localhost:${PORT}/api-docs`);
+      console.log(`Health check: http://0.0.0.0:${PORT}/api/health`);
+      console.log(`API Documentation: http://0.0.0.0:${PORT}/api-docs`);
     });
   } catch (error) {
     console.error('Unable to start server:', error);

@@ -1,13 +1,13 @@
 const sequelize = require('../config/database');
 
-async function cleanUsersIndexes() {
+async function cleanParticipantsIndexes() {
   try {
-    console.log('Starting cleanup of duplicate indexes on users table...');
+    console.log('Starting cleanup of duplicate indexes on participants table...');
     
-    // Get all indexes on users table
-    const [indexes] = await sequelize.query("SHOW INDEX FROM users");
+    // Get all indexes on participants table
+    const [indexes] = await sequelize.query("SHOW INDEX FROM participants");
     
-    console.log(`Found ${indexes.length} indexes on users table`);
+    console.log(`Found ${indexes.length} indexes on participants table`);
     
     // Group indexes by column name
     const indexesByColumn = {};
@@ -44,7 +44,7 @@ async function cleanUsersIndexes() {
     for (const indexName of indexesToRemove) {
       try {
         console.log(`Removing duplicate index: ${indexName}`);
-        await sequelize.query(`DROP INDEX \`${indexName}\` ON users`);
+        await sequelize.query(`DROP INDEX \`${indexName}\` ON participants`);
       } catch (error) {
         console.log(`Could not remove index ${indexName}: ${error.message}`);
       }
@@ -53,24 +53,18 @@ async function cleanUsersIndexes() {
     console.log(`Cleanup completed. Removed ${indexesToRemove.length} duplicate indexes.`);
     
     // Show final index count
-    const [finalIndexes] = await sequelize.query("SHOW INDEX FROM users");
+    const [finalIndexes] = await sequelize.query("SHOW INDEX FROM participants");
     console.log(`Final index count: ${finalIndexes.length}`);
     
     // Verify we have the required unique indexes
-    const hasUsernameIndex = finalIndexes.some(idx => idx.Column_name === 'username' && idx.Non_unique === 0);
-    const hasEmailIndex = finalIndexes.some(idx => idx.Column_name === 'email' && idx.Non_unique === 0);
+    const hasTicketNumberIndex = finalIndexes.some(idx => idx.Column_name === 'ticketNumber' && idx.Non_unique === 0);
     
-    if (!hasUsernameIndex) {
-      console.log('Creating missing username unique index...');
-      await sequelize.query('ALTER TABLE users ADD UNIQUE INDEX username (username)');
+    if (!hasTicketNumberIndex) {
+      console.log('Creating missing ticketNumber unique index...');
+      await sequelize.query('ALTER TABLE participants ADD UNIQUE INDEX ticketNumber (ticketNumber)');
     }
     
-    if (!hasEmailIndex) {
-      console.log('Creating missing email unique index...');
-      await sequelize.query('ALTER TABLE users ADD UNIQUE INDEX email (email)');
-    }
-    
-    console.log('✅ Users table index cleanup completed successfully!');
+    console.log('✅ Participants table index cleanup completed successfully!');
     
   } catch (error) {
     console.error('❌ Error cleaning up indexes:', error);
@@ -80,4 +74,4 @@ async function cleanUsersIndexes() {
 }
 
 // Run the cleanup
-cleanUsersIndexes();
+cleanParticipantsIndexes();
